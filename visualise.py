@@ -103,26 +103,35 @@ def plot_dashboard(tel, braking_zones, accel_zones, regen_results, deploy_result
     ax3 = fig.add_subplot(gs[1, 1])
     ax1.plot(tel['Distance'], tel['Speed'], color="#032458", linewidth=1.2, label='Speed (km/h)')
     for zone in braking_zones:
-        ax1.axvspan(zone['start_dist'], zone['end_dist'], color='#e8003d', alpha=0.2, label='Regen Zone')
+        ax1.axvspan(zone['start_dist'], zone['end_dist'], color='#e8003d', alpha=0.2, 
+                    label='Regen Zone' if 'Regen Zone' not in ax1.get_legend_handles_labels()[1] else "")
     for zone in accel_zones:
-        ax1.axvspan(zone['start_dist'], zone['end_dist'], color="#055e10", alpha=0.2, label='Deployment Zone')
+        ax1.axvspan(zone['start_dist'], zone['end_dist'], color="#055e10", alpha=0.2, 
+                    label='Deployment Zone'  if 'Deployment Zone' not in ax1.get_legend_handles_labels()[1] else "")
     ax1.set_title('Speed Trace |Regen Zones(Red) Deploy Zones(Green)', color="#0b4cf2")
     ax1.set_xlabel('Distance (m)')
     ax1.set_ylabel('Speed (km/h)')
     ax1.grid(alpha=0.15)
 
-    zones = [f"Z{r.get('zone_idx', '??')}" for r in regen_results]
-    energy = [r.get('actual_regen_mj', 0) for r in regen_results]
+    zones = [f"Z{i+1}" for i in range(len(regen_results))]
+    energy = [r.get('actual_harvest_mj', 0) for r in regen_results]
     colors = ['#e8003d' if r.get('power_limited', False) else '#00d4ff' for r in regen_results]
 
-    ax2.bar(zones, energy, color=colors, width=0.6, zorder=3)
-    ax2.axhline(y=2.0, color='#ffd700', linestyle='--', lw=1, label='FIA 2MJ Deployment Cap', zorder=2)
-    ax2.set_title('Regen Harvest per Braking Zone', color='#eaf0ff')
-    ax2.set_xlabel('Braking Zones')
+    bars = ax2.bar(zones, energy, color=colors, width=0.6, zorder=3)
+    ax2.axhline(y=2.0, color='#ffd700', linestyle='--', lw=1, label='FIA 2MJ Cap', zorder=2) #FIA deployment limit reference line
+    from matplotlib.patches import Patch # Legend (Manual handles for the colors)
+    legend_elements = [
+        Patch(facecolor='#e8003d', label='Power Limited'),
+        Patch(facecolor='#00d4ff', label='Full Recovery'),
+        plt.Line2D([0], [0], color='#ffd700', linestyle='--', label='FIA 2MJ Cap')
+    ]
+    ax2.set_title('Regen Harvest per Braking Zone', color="#020714")
     ax2.set_ylabel('Energy Harvested (MJ)')
     ax2.grid(axis='y', alpha=0.2, zorder=0)
-    ax2.legend(loc='upper right', facecolor='#0a0c10', edgecolor='#2a3550')
+    ax2.legend(handles=legend_elements, loc='upper right')
 
+    if not mode_results:
+        print("Warning: mode_results is empty!") #TODO: rename
     modes = list(mode_results.keys())
     deltas = [mode_results[m]['lap_time_delta_ms'] for m in modes]
     m_colors = [ERS_MODES[m]['color'] for m in modes]
@@ -134,8 +143,8 @@ def plot_dashboard(tel, braking_zones, accel_zones, regen_results, deploy_result
     
     fig.suptitle('ERS Simulator Dashboard', fontsize=16, color="#111111")
     plt.savefig('ers_simulator_dashboard.png', dpi=300, bbox_inches='tight')
-    plt.show()
     print("Dashboard plot saved as ers_simulator_dashboard.png")
+    plt.show()
 
 
     
